@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CRM Property Alert Webhook Payload",
+  "description": "Sent by scraper to CRM Workflow 2 per matched watcher. One call per watcher per new property.",
+  "type": "object",
+  "required": ["contactId", "watchListName", "alertFrequency", "watcher", "property"],
+  "properties": {
+    "contactId":      { "type": "string", "description": "CRM contact ID of the watcher" },
+    "watchListName":  { "type": "string", "example": "Bay County Land Deals" },
+    "alertFrequency": { "type": "string", "enum": ["Immediate", "Daily Digest (8am CT)", "Weekly Digest (Mon 8am CT)"] },
+    "watcher": {
+      "type": "object",
+      "properties": {
+        "name":     { "type": "string" },
+        "email":    { "type": "string", "format": "email" },
+        "ccEmails": { "type": "array", "items": { "type": "string" } },
+        "phone":    { "type": "string" }
+      }
+    },
+    "property": {
+      "type": "object",
+      "required": ["address", "county", "auctionSite", "propertyUrl"],
+      "properties": {
+        "address":        { "type": "string",           "example": "1234 Beachview Dr, Panama City FL 32401" },
+        "type":           { "type": "string",           "example": "Single Family" },
+        "county":         { "type": "string",           "example": "Bay FL" },
+        "bidPrice":       { "type": ["integer", "null"],"example": 125000 },
+        "acreage":        { "type": ["number",  "null"],"example": 2.1 },
+        "beds":           { "type": ["integer", "null"],"example": 3 },
+        "baths":          { "type": ["integer", "null"],"example": 2 },
+        "auctionDate":    { "type": ["string",  "null"],"format": "date-time" },
+        "auctionSite":    { "type": "string",           "example": "bay.realforeclose.com" },
+        "caseNumber":     { "type": "string",           "example": "2026-CA-001234" },
+        "propertyUrl":    { "type": "string",           "format": "uri", "description": "Real listing detail URL" },
+        "imageUrl":       { "type": ["string",  "null"],"format": "uri" },
+        "notes":          { "type": "string" },
+        "listingFoundAt": { "type": "string",           "format": "date-time" },
+        "isNew":          { "type": "boolean" }
+      }
+    }
+  }
+}
