@@ -1,43 +1,61 @@
 {
-  "generated": "2026-08-31T18:04:56.530686+00:00",
+  "generated": "2026-08-31T18:08:14.936084+00:00",
   "source": "PP Investments Foreclosure Watch Scraper v4",
   "count": 11,
   "loginDebug": {
     "bay.realforeclose.com": {
-      "has_creds": false,
-      "result": "SKIPPED"
+      "has_creds": true,
+      "http_status": 200,
+      "response_preview": "{\"isOk\":\"YES\",\"docsreq\":\"YES\"}",
+      "result": "OK"
     },
     "gulf.realforeclose.com": {
-      "has_creds": false,
-      "result": "SKIPPED"
+      "has_creds": true,
+      "http_status": 200,
+      "response_preview": "{\"isOk\":\"YES\",\"docsreq\":\"YES\"}",
+      "result": "OK"
     },
     "walton.realforeclose.com": {
-      "has_creds": false,
-      "result": "SKIPPED"
+      "has_creds": true,
+      "http_status": 200,
+      "response_preview": "{\"isOk\":\"YES\",\"docsreq\":\"YES\"}",
+      "result": "OK"
     },
     "okaloosa.realforeclose.com": {
-      "has_creds": false,
-      "result": "SKIPPED"
+      "has_creds": true,
+      "http_status": 200,
+      "response_preview": "<!doctype html>\n\n<html lang=\"en\" class=\"h-100\">\n\n<head>\n\t<meta charset=\"utf-8\">\n\t<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\">\n\t<meta name=\"description\" content=\"Realauction.com Public Website\">\n\t<meta name=\"author\" content=\"Jeremy Page (Creative Director)\">",
+      "result": "FAILED"
     },
     "washington.realforeclose.com": {
-      "has_creds": false,
-      "result": "SKIPPED"
+      "has_creds": true,
+      "http_status": 200,
+      "response_preview": "{\"isOk\":\"YES\",\"docsreq\":\"YES\"}",
+      "result": "OK"
     },
     "holmes.realforeclose.com": {
-      "has_creds": false,
-      "result": "SKIPPED"
+      "has_creds": true,
+      "http_status": 200,
+      "response_preview": "<!doctype html>\n\n<html lang=\"en\" class=\"h-100\">\n\n<head>\n\t<meta charset=\"utf-8\">\n\t<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\">\n\t<meta name=\"description\" content=\"Realauction.com Public Website\">\n\t<meta name=\"author\" content=\"Jeremy Page (Creative Director)\">",
+      "result": "FAILED"
     },
     "jackson.realforeclose.com": {
-      "has_creds": false,
-      "result": "SKIPPED"
+      "has_creds": true,
+      "http_status": 200,
+      "response_preview": "{\"isOk\":\"YES\",\"docsreq\":\"YES\"}",
+      "result": "OK"
     },
     "calhoun.realforeclose.com": {
-      "has_creds": false,
-      "result": "SKIPPED"
+      "has_creds": true,
+      "http_status": 200,
+      "response_preview": "{\"isOk\":\"YES\",\"docsreq\":\"YES\"}",
+      "result": "OK"
     },
     "escambia.realforeclose.com": {
-      "has_creds": false,
-      "result": "SKIPPED"
+      "has_creds": true,
+      "http_status": 200,
+      "response_preview": "{\"isOk\":\"YES\",\"docsreq\":\"YES\"}",
+      "result": "OK"
     }
   },
   "listings": [
@@ -55,8 +73,8 @@
       "caseNumber": "Sale date 08/31/2026",
       "propertyUrl": "https://bay.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=08/31/2026",
       "imageUrl": null,
-      "notes": "Live auction date from county portal calendar. Add realforeclose.com credentials (REALFORECLOSE_USER / REALFORECLOSE_PASS) to GitHub Secrets to unlock per-case addresses and bids.",
-      "listingFoundAt": "2026-08-31T18:04:38.170195+00:00",
+      "notes": "Live auction date from county portal. No cases published yet \u2014 check back closer to the sale date.",
+      "listingFoundAt": "2026-08-31T18:07:52.692791+00:00",
       "isNew": false,
       "isLiveScrape": true,
       "parcelId": null,
@@ -77,8 +95,8 @@
       "caseNumber": "Sale date 09/02/2026",
       "propertyUrl": "https://bay.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=09/02/2026",
       "imageUrl": null,
-      "notes": "Live auction date from county portal calendar. Add realforeclose.com credentials (REALFORECLOSE_USER / REALFORECLOSE_PASS) to GitHub Secrets to unlock per-case addresses and bids.",
-      "listingFoundAt": "2026-08-31T18:04:38.170263+00:00",
+      "notes": "Live auction date from county portal. No cases published yet \u2014 check back closer to the sale date.",
+      "listingFoundAt": "2026-08-31T18:07:52.765919+00:00",
       "isNew": false,
       "isLiveScrape": true,
       "parcelId": null,
@@ -99,8 +117,8 @@
       "caseNumber": "Sale date 09/10/2026",
       "propertyUrl": "https://gulf.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=09/10/2026",
       "imageUrl": null,
-      "notes": "Live auction date from county portal calendar. Add realforeclose.com credentials (REALFORECLOSE_USER / REALFORECLOSE_PASS) to GitHub Secrets to unlock per-case addresses and bids.",
-      "listingFoundAt": "2026-08-31T18:04:39.470485+00:00",
+      "notes": "Live auction date from county portal. No cases published yet \u2014 check back closer to the sale date.",
+      "listingFoundAt": "2026-08-31T18:07:54.541241+00:00",
       "isNew": false,
       "isLiveScrape": true,
       "parcelId": null,
@@ -121,8 +139,8 @@
       "caseNumber": "Sale date 08/31/2026",
       "propertyUrl": "https://walton.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=08/31/2026",
       "imageUrl": null,
-      "notes": "Live auction date from county portal calendar. Add realforeclose.com credentials (REALFORECLOSE_USER / REALFORECLOSE_PASS) to GitHub Secrets to unlock per-case addresses and bids.",
-      "listingFoundAt": "2026-08-31T18:04:40.773341+00:00",
+      "notes": "Live auction date from county portal. No cases published yet \u2014 check back closer to the sale date.",
+      "listingFoundAt": "2026-08-31T18:07:56.261848+00:00",
       "isNew": false,
       "isLiveScrape": true,
       "parcelId": null,
@@ -143,8 +161,8 @@
       "caseNumber": "Sale date 09/01/2026",
       "propertyUrl": "https://walton.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=09/01/2026",
       "imageUrl": null,
-      "notes": "Live auction date from county portal calendar. Add realforeclose.com credentials (REALFORECLOSE_USER / REALFORECLOSE_PASS) to GitHub Secrets to unlock per-case addresses and bids.",
-      "listingFoundAt": "2026-08-31T18:04:40.773421+00:00",
+      "notes": "Live auction date from county portal. No cases published yet \u2014 check back closer to the sale date.",
+      "listingFoundAt": "2026-08-31T18:07:56.337346+00:00",
       "isNew": false,
       "isLiveScrape": true,
       "parcelId": null,
@@ -165,8 +183,8 @@
       "caseNumber": "Sale date 09/16/2026",
       "propertyUrl": "https://washington.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=09/16/2026",
       "imageUrl": null,
-      "notes": "Live auction date from county portal calendar. Add realforeclose.com credentials (REALFORECLOSE_USER / REALFORECLOSE_PASS) to GitHub Secrets to unlock per-case addresses and bids.",
-      "listingFoundAt": "2026-08-31T18:04:43.820576+00:00",
+      "notes": "Live auction date from county portal. No cases published yet \u2014 check back closer to the sale date.",
+      "listingFoundAt": "2026-08-31T18:08:00.142076+00:00",
       "isNew": false,
       "isLiveScrape": true,
       "parcelId": null,
@@ -187,8 +205,8 @@
       "caseNumber": "Sale date 09/30/2026",
       "propertyUrl": "https://washington.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=09/30/2026",
       "imageUrl": null,
-      "notes": "Live auction date from county portal calendar. Add realforeclose.com credentials (REALFORECLOSE_USER / REALFORECLOSE_PASS) to GitHub Secrets to unlock per-case addresses and bids.",
-      "listingFoundAt": "2026-08-31T18:04:43.820628+00:00",
+      "notes": "Live auction date from county portal. No cases published yet \u2014 check back closer to the sale date.",
+      "listingFoundAt": "2026-08-31T18:08:00.212337+00:00",
       "isNew": false,
       "isLiveScrape": true,
       "parcelId": null,
@@ -209,8 +227,8 @@
       "caseNumber": "Sale date 09/17/2026",
       "propertyUrl": "https://jackson.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=09/17/2026",
       "imageUrl": null,
-      "notes": "Live auction date from county portal calendar. Add realforeclose.com credentials (REALFORECLOSE_USER / REALFORECLOSE_PASS) to GitHub Secrets to unlock per-case addresses and bids.",
-      "listingFoundAt": "2026-08-31T18:04:46.734299+00:00",
+      "notes": "Live auction date from county portal. No cases published yet \u2014 check back closer to the sale date.",
+      "listingFoundAt": "2026-08-31T18:08:04.002046+00:00",
       "isNew": false,
       "isLiveScrape": true,
       "parcelId": null,
@@ -231,8 +249,8 @@
       "caseNumber": "Sale date 09/24/2026",
       "propertyUrl": "https://jackson.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=09/24/2026",
       "imageUrl": null,
-      "notes": "Live auction date from county portal calendar. Add realforeclose.com credentials (REALFORECLOSE_USER / REALFORECLOSE_PASS) to GitHub Secrets to unlock per-case addresses and bids.",
-      "listingFoundAt": "2026-08-31T18:04:46.734365+00:00",
+      "notes": "Live auction date from county portal. No cases published yet \u2014 check back closer to the sale date.",
+      "listingFoundAt": "2026-08-31T18:08:04.078092+00:00",
       "isNew": false,
       "isLiveScrape": true,
       "parcelId": null,
@@ -253,8 +271,8 @@
       "caseNumber": "Sale date 09/01/2026",
       "propertyUrl": "https://escambia.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=09/01/2026",
       "imageUrl": null,
-      "notes": "Live auction date from county portal calendar. Add realforeclose.com credentials (REALFORECLOSE_USER / REALFORECLOSE_PASS) to GitHub Secrets to unlock per-case addresses and bids.",
-      "listingFoundAt": "2026-08-31T18:04:49.306922+00:00",
+      "notes": "Live auction date from county portal. No cases published yet \u2014 check back closer to the sale date.",
+      "listingFoundAt": "2026-08-31T18:08:07.374157+00:00",
       "isNew": false,
       "isLiveScrape": true,
       "parcelId": null,
@@ -275,8 +293,8 @@
       "caseNumber": "Sale date 09/02/2026",
       "propertyUrl": "https://escambia.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=09/02/2026",
       "imageUrl": null,
-      "notes": "Live auction date from county portal calendar. Add realforeclose.com credentials (REALFORECLOSE_USER / REALFORECLOSE_PASS) to GitHub Secrets to unlock per-case addresses and bids.",
-      "listingFoundAt": "2026-08-31T18:04:49.306971+00:00",
+      "notes": "Live auction date from county portal. No cases published yet \u2014 check back closer to the sale date.",
+      "listingFoundAt": "2026-08-31T18:08:07.442973+00:00",
       "isNew": false,
       "isLiveScrape": true,
       "parcelId": null,
