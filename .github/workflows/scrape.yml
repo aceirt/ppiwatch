@@ -26,19 +26,29 @@ jobs:
           python-version: '3.11'
           cache: pip
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: pip install -r scraper/requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
 
       - name: Run scraper
         env:
-          CRM_WEBHOOK_URL:  ${{ secrets.CRM_WEBHOOK_URL }}
-          CRM_API_KEY:      ${{ secrets.CRM_API_KEY }}
-          HUD_API_KEY:      ${{ secrets.HUD_API_KEY }}
-          GOVDEALS_API_KEY: ${{ secrets.GOVDEALS_API_KEY }}
-          FEED_OUTPUT_PATH: docs/feed.json
+          CRM_WEBHOOK_URL:    ${{ secrets.CRM_WEBHOOK_URL }}
+          CRM_API_KEY:        ${{ secrets.CRM_API_KEY }}
+          AUCTION_COM_EMAIL:  ${{ secrets.AUCTION_COM_EMAIL }}
+          AUCTION_COM_PASS:   ${{ secrets.AUCTION_COM_PASS }}
+          HUBZU_EMAIL:        ${{ secrets.HUBZU_EMAIL }}
+          HUBZU_PASS:         ${{ secrets.HUBZU_PASS }}
+          XOME_EMAIL:         ${{ secrets.XOME_EMAIL }}
+          XOME_PASS:          ${{ secrets.XOME_PASS }}
+          PROXY_URL:          ${{ secrets.PROXY_URL }}
+          HUD_API_KEY:        ${{ secrets.HUD_API_KEY }}
+          GOVDEALS_API_KEY:   ${{ secrets.GOVDEALS_API_KEY }}
+          FEED_OUTPUT_PATH:   docs/feed.json
         run: python scraper/scraper.py
 
-      - name: Commit updated feed.json
+      - name: Commit updated feed
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
