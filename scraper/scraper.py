@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-PP Investments - Foreclosure & Auction Watch Scraper
-Polls realforeclose.com counties + auction.com / hubzu / xome /
-homepath / HUD / GovDeals every 4-6 h.
-Writes docs/feed.json  (served via GitHub Pages for the watch app)
-Fires CRM Workflow-2 webhook per matched watcher (per-contact alert).
+PP Investments - Foreclosure & Auction Watch Scraper v3
+- realforeclose.com (9 FL counties)  → requests + BeautifulSoup
+- auction.com                         → Playwright (stealth, optional login)
+- hubzu.com                           → Playwright (stealth, optional login)
+- xome.com                            → Playwright (stealth, optional login)
+- hudhomestore.gov                    → requests (public API)
+- govdeals.com                        → Playwright (stealth)
 
-Deploy: GitHub Actions (.github/workflows/scrape.yml), VPS cron,
-        n8n, Make.com, or AWS Lambda (README has all four).
+Safety: if total listings == 0, existing feed.json is preserved.
 """
 
-import json, os, time, logging, hashlib
+import json, os, time, logging, hashlib, re
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from dataclasses import dataclass, asdict
 from pathlib import Path
@@ -27,18 +29,23 @@ logging.basicConfig(
 log = logging.getLogger("ppwatch")
 
 # -- Config -------------------------------------------------------------------
-CRM_WEBHOOK_URL = os.getenv("CRM_WEBHOOK_URL", "")
-CRM_API_KEY     = os.getenv("CRM_API_KEY",    "")
-CRM_LOCATION_ID = "KoyfEHXBmxbD69hWgYyJ"
-HUD_API_KEY     = os.getenv("HUD_API_KEY",    "")
-GOVDEALS_KEY    = os.getenv("GOVDEALS_API_KEY","")
+CRM_WEBHOOK_URL   = os.getenv("CRM_WEBHOOK_URL",   "")
+CRM_API_KEY       = os.getenv("CRM_API_KEY",       "")
+CRM_LOCATION_ID   = "KoyfEHXBmxbD69hWgYyJ"
 
-FEED_PATH  = Path(os.getenv("FEED_OUTPUT_PATH", "docs/feed.json"))
-SEEN_PATH  = Path("scraper/.seen.json")
+AUCTION_COM_EMAIL = os.getenv("AUCTION_COM_EMAIL", "")
+AUCTION_COM_PASS  = os.getenv("AUCTION_COM_PASS",  "")
+HUBZU_EMAIL       = os.getenv("HUBZU_EMAIL",       "")
+HUBZU_PASS        = os.getenv("HUBZU_PASS",        "")
+XOME_EMAIL        = os.getenv("XOME_EMAIL",        "")
+XOME_PASS         = os.getenv("XOME_PASS",         "")
+PROXY_URL         = os.getenv("PROXY_URL",         "")   # e.g. http://user:pass@host:port
+HUD_API_KEY       = os.getenv("HUD_API_KEY",       "")
+GOVDEALS_KEY      = os.getenv("GOVDEALS_API_KEY",  "")
 
-# Minimum listings before we overwrite the existing feed.
-# If the scraper returns fewer than this, keep the existing feed.json intact.
-MIN_LISTINGS_TO_OVERWRITE = 1
+FEED_PATH = Path(os.getenv("FEED_OUTPUT_PATH", "docs/feed.json"))
+SEEN_PATH = Path("scraper/.seen.json")
+MIN_LISTINGS_TO_OVERWRITE = 1   # keep existing feed if scraper returns fewer
 
 HEADERS = {
     "User-Agent": (
@@ -51,15 +58,15 @@ HEADERS = {
 }
 
 REALFORECLOSE_COUNTIES = [
-    ("bay",         "Bay FL"),
-    ("gulf",        "Gulf FL"),
-    ("walton",      "Walton FL"),
-    ("okaloosa",    "Okaloosa FL"),
-    ("washington",  "Washington FL"),
-    ("holmes",      "Holmes FL"),
-    ("jackson",     "Jackson FL"),
-    ("calhoun",     "Calhoun FL"),
-    ("escambia",    "Escambia FL"),
+    ("bay",        "Bay FL"),
+    ("gulf",       "Gulf FL"),
+    ("walton",     "Walton FL"),
+    ("okaloosa",   "Okaloosa FL"),
+    ("washington", "Washington FL"),
+    ("holmes",     "Holmes FL"),
+    ("jackson",    "Jackson FL"),
+    ("calhoun",    "Calhoun FL"),
+    ("escambia",   "Escambia FL"),
 ]
 
 # -- Data model ---------------------------------------------------------------
@@ -86,7 +93,7 @@ class Property:
         return asdict(self)
 
 
-# -- Seen-listings deduplication ----------------------------------------------
+# -- Helpers ------------------------------------------------------------------
 def load_seen() -> set:
     if SEEN_PATH.exists():
         return set(json.loads(SEEN_PATH.read_text()))
@@ -99,9 +106,11 @@ def save_seen(seen: set):
 def listing_id(key: str) -> str:
     return hashlib.md5(key.encode()).hexdigest()[:12]
 
+def clean_price(text: str) -> Optional[int]:
+    digits = re.sub(r"[^\d]", "", text)
+    return int(digits) if digits else None
 
-# -- HTTP helpers -------------------------------------------------------------
-def get(url, *, timeout=20, **kw) -> Optional[requests.Response]:
+def get_r(url, *, timeout=20, **kw) -> Optional[requests.Response]:
     try:
         r = requests.get(url, headers=HEADERS, timeout=timeout, **kw)
         r.raise_for_status()
@@ -121,141 +130,219 @@ def post_json(url, payload) -> bool:
 
 
 # ============================================================================
-# SITE PARSERS
+# PLAYWRIGHT BROWSER HELPER
+# ============================================================================
+
+PLAYWRIGHT_AVAILABLE = False
+try:
+    from playwright.sync_api import sync_playwright
+    from playwright_stealth import stealth_sync
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    log.warning("Playwright not installed — browser-based parsers will be skipped")
+
+
+@contextmanager
+def browser_page(headless=True):
+    """
+    Yields a stealthy Playwright page. Automatically closes on exit.
+    Uses PROXY_URL env var if set (e.g. for residential proxies).
+    """
+    if not PLAYWRIGHT_AVAILABLE:
+        yield None
+        return
+
+    launch_opts = {"headless": headless}
+    ctx_opts    = {}
+
+    if PROXY_URL:
+        # Support http://user:pass@host:port format
+        ctx_opts["proxy"] = {"server": PROXY_URL}
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(**launch_opts)
+        ctx     = browser.new_context(
+            **ctx_opts,
+            viewport={"width": 1280, "height": 800},
+            user_agent=HEADERS["User-Agent"],
+            locale="en-US",
+        )
+        page = ctx.new_page()
+        stealth_sync(page)
+        try:
+            yield page
+        finally:
+            ctx.close()
+            browser.close()
+
+
+def browser_get_html(url: str, *, wait_selector: str = None,
+                     login_fn=None, timeout: int = 30000) -> Optional[str]:
+    """
+    Navigate to url with a stealthy browser, optionally run login_fn(page)
+    before navigating, wait for an optional CSS selector, return page HTML.
+    """
+    with browser_page() as page:
+        if page is None:
+            return None
+        try:
+            if login_fn:
+                login_fn(page)
+            page.goto(url, timeout=timeout, wait_until="domcontentloaded")
+            if wait_selector:
+                try:
+                    page.wait_for_selector(wait_selector, timeout=10000)
+                except Exception:
+                    pass
+            page.wait_for_timeout(2000)   # let JS settle
+            return page.content()
+        except Exception as e:
+            log.warning("browser_get_html %s -> %s", url, e)
+            return None
+
+
+# ============================================================================
+# SITE PARSERS — requests-based
 # ============================================================================
 
 def parse_realforeclose(slug: str, county: str) -> list:
-    """
-    realforeclose.com - Judicial foreclosure sales.
-    The site renders a calendar/list view; we grab the upcoming-sales page.
-    """
     base    = f"https://{slug}.realforeclose.com"
     results = []
 
-    # Try the main auction listing page
-    for path in [
-        "/index.cfm?zaction=AUCTION&zmethod=preview",
-        "/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AUCTIONDATE=",
-        "/",
-    ]:
-        r = get(f"{base}{path}")
+    r = None
+    for path in ["/index.cfm?zaction=AUCTION&zmethod=preview", "/"]:
+        r = get_r(f"{base}{path}")
         if r:
             break
     if not r:
         return results
 
     soup = BeautifulSoup(r.text, "lxml")
-
-    # realforeclose uses a ColdFusion page; listings are in table rows
-    # with class AUCTION_ITEM or inside a #PUBLIC_AUCTION_RESULTS table
     selectors = [
         "table#PUBLIC_AUCTION_RESULTS tr",
-        ".AUCTION_ITEM",
-        "tr.altRow",
-        "tr.altRow2",
-        "tr[class*='Row']",
-        "table.dataTable tr",
-        "#auction_list tr",
-        "tbody tr",
+        ".AUCTION_ITEM", "tr.altRow", "tr.altRow2",
+        "tr[class*='Row']", "table.dataTable tr",
+        "#auction_list tr", "tbody tr",
     ]
-
     rows = []
     for sel in selectors:
         rows = soup.select(sel)
-        if len(rows) > 1:  # >1 because first row is often a header
-            log.info("realforeclose/%s: matched selector '%s' -> %d rows", slug, sel, len(rows))
+        if len(rows) > 1:
             break
 
     now_iso = datetime.now(timezone.utc).isoformat()
-
     for row in rows:
         cells = row.find_all(["td", "th"])
-        if len(cells) < 2:
+        if len(cells) < 2 or (row.find("th") and not row.find("td")):
             continue
-        # Skip header rows
-        if row.find("th") and not row.find("td"):
-            continue
-
         text_cells = [c.get_text(" ", strip=True) for c in cells]
         full_text  = " | ".join(text_cells)
 
-        # Try to extract case number (looks like YYYY-CA-NNNNNN)
-        import re
-        case_match = re.search(r'\d{4}-[A-Z]{2}-\d+', full_text)
-        case_num   = case_match.group(0) if case_match else listing_id(full_text)
+        case_m   = re.search(r'\d{4}-[A-Z]{2}-\d+', full_text)
+        case_num = case_m.group(0) if case_m else listing_id(full_text)
+        price_m  = re.search(r'\$[\d,]+\.?\d*', full_text)
+        bid_int  = clean_price(price_m.group(0)) if price_m else None
 
-        # Try to extract a bid/judgment amount ($NNN,NNN)
-        price_match = re.search(r'\$[\d,]+\.?\d*', full_text)
-        bid_int = None
-        if price_match:
-            clean = re.sub(r'[^\d]', '', price_match.group(0))
-            bid_int = int(clean) if clean else None
+        link     = row.find("a", href=True)
+        href     = link["href"] if link else ""
+        prop_url = (href if href.startswith("http") else base + "/" + href.lstrip("/")) if href \
+                   else f"{base}/index.cfm?zaction=AUCTION&zmethod=preview"
 
-        # Try to find a link
-        link = row.find("a", href=True)
-        if link:
-            href = link["href"]
-            prop_url = href if href.startswith("http") else base + "/" + href.lstrip("/")
-        else:
-            prop_url = f"{base}/index.cfm?zaction=AUCTION&zmethod=preview"
-
-        # Best-effort address from cells
-        # Typically: date | case# | address | bid | plaintiff/defendant
         addr = ""
-        for cell_text in text_cells:
-            # Address-like: contains a number and a street keyword
-            if re.search(r'\d+\s+\w+\s+(St|Ave|Rd|Dr|Blvd|Ln|Way|Ct|Pkwy|Hwy|Pl)', cell_text, re.I):
-                addr = cell_text
+        for ct in text_cells:
+            if re.search(r'\d+\s+\w+\s+(St|Ave|Rd|Dr|Blvd|Ln|Way|Ct|Pkwy|Hwy|Pl)', ct, re.I):
+                addr = ct
                 break
         if not addr:
-            # Fall back to longest cell
             addr = max(text_cells, key=len) if text_cells else f"Property in {county}"
-
-        # Auction date: first cell that looks like a date
-        auction_date = None
-        for cell_text in text_cells:
-            date_match = re.search(r'\d{1,2}/\d{1,2}/\d{4}', cell_text)
-            if date_match:
-                auction_date = date_match.group(0)
-                break
-
         if not addr or len(addr) < 5:
             continue
 
+        date_m       = re.search(r'\d{1,2}/\d{1,2}/\d{4}', full_text)
+        auction_date = date_m.group(0) if date_m else None
+
         results.append(Property(
-            id            = listing_id(case_num),
-            address       = addr,
-            county        = county,
-            type          = "Single Family",
-            beds          = None,
-            baths         = None,
-            acreage       = None,
-            bidPrice      = bid_int,
-            auctionDate   = auction_date,
-            auctionSite   = f"{slug}.realforeclose.com",
-            caseNumber    = case_num,
-            propertyUrl   = prop_url,
-            imageUrl      = None,
-            notes         = f"Judicial foreclosure - {county}. Sold as-is. {full_text[:200]}",
-            listingFoundAt = now_iso,
+            id=listing_id(case_num), address=addr,
+            county=county, type="Single Family",
+            beds=None, baths=None, acreage=None,
+            bidPrice=bid_int, auctionDate=auction_date,
+            auctionSite=f"{slug}.realforeclose.com",
+            caseNumber=case_num, propertyUrl=prop_url,
+            imageUrl=None,
+            notes=f"Judicial foreclosure - {county}. {full_text[:200]}",
+            listingFoundAt=now_iso,
         ))
 
     log.info("realforeclose/%s -> %d listings", slug, len(results))
     return results
 
 
+def parse_hud() -> list:
+    results = []
+    kw = {"headers": {**HEADERS, "X-API-KEY": HUD_API_KEY}} if HUD_API_KEY else {}
+    r  = get_r(
+        "https://www.hudhomestore.gov/HUDApi/ListingSearch",
+        params={"stateCode": "FL", "county": "Bay", "pageSize": 50}, **kw
+    )
+    if not r:
+        return results
+    try:
+        for p in r.json().get("properties", r.json().get("results", [])):
+            pid = str(p.get("listingId", p.get("caseNumber", "")))
+            results.append(Property(
+                id=listing_id(pid),
+                address=f"{p.get('streetAddr','')} {p.get('city','')} FL {p.get('zip','')}".strip(),
+                county=f"{p.get('county','FL')} FL",
+                type=p.get("propType", "Single Family"),
+                beds=p.get("bedroom"), baths=p.get("bath"), acreage=None,
+                bidPrice=int(p.get("listPrice", 0) or 0) or None,
+                auctionDate=p.get("listingDate"),
+                auctionSite="hudhomestore.com", caseNumber=pid,
+                propertyUrl=f"https://www.hudhomestore.gov/Listing/PropertySearch.aspx?sState=FL&sCaseNumber={pid}",
+                imageUrl=None,
+                notes=f"HUD FHA foreclosure. Case #{pid}.",
+                listingFoundAt=datetime.now(timezone.utc).isoformat(),
+            ))
+    except Exception as e:
+        log.warning("HUD: %s", e)
+    log.info("HUD -> %d listings", len(results))
+    return results
+
+
+# ============================================================================
+# SITE PARSERS — Playwright-based (bot-protected sites)
+# ============================================================================
+
+# --- auction.com -------------------------------------------------------------
+
+def _auction_login(page):
+    if not AUCTION_COM_EMAIL:
+        return
+    try:
+        page.goto("https://www.auction.com/signin/", timeout=20000,
+                  wait_until="domcontentloaded")
+        page.wait_for_timeout(1500)
+        page.fill("input[name='email'], input[type='email']", AUCTION_COM_EMAIL)
+        page.fill("input[name='password'], input[type='password']", AUCTION_COM_PASS)
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(3000)
+        log.info("auction.com login submitted")
+    except Exception as e:
+        log.warning("auction.com login: %s", e)
+
+
 def parse_auction_com() -> list:
     results = []
-    r = get(
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # Try JSON API first (no auth needed for basic search)
+    r = get_r(
         "https://www.auction.com/api/property/search",
-        params={
-            "state": "FL",
-            "county": "Bay,Gulf,Walton,Okaloosa,Washington",
-            "propertyType": "SFR,MFR,LND,COM",
-            "listingType": "AUCTION,BIN",
-            "pageSize": 50,
-            "page": 1,
-        }
+        params={"state": "FL",
+                "county": "Bay,Gulf,Walton,Okaloosa,Washington",
+                "propertyType": "SFR,MFR,LND,COM",
+                "listingType": "AUCTION,BIN",
+                "pageSize": 50, "page": 1},
     )
     if r:
         try:
@@ -275,159 +362,261 @@ def parse_auction_com() -> list:
                     propertyUrl=f"https://www.auction.com/residential/{slug}/",
                     imageUrl=p.get("photoUrl") or p.get("primaryPhoto"),
                     notes=str(p.get("description", ""))[:300],
-                    listingFoundAt=datetime.now(timezone.utc).isoformat(),
+                    listingFoundAt=now_iso,
                 ))
-            log.info("auction.com -> %d listings", len(results))
-            return results
+            if results:
+                log.info("auction.com (API) -> %d listings", len(results))
+                return results
         except Exception as e:
-            log.warning("auction.com json: %s", e)
+            log.warning("auction.com API: %s", e)
 
-    # Fallback HTML
-    r = get("https://www.auction.com/foreclosure/real-estate/fl/")
-    if not r:
+    # Fallback: Playwright browser
+    if not PLAYWRIGHT_AVAILABLE:
+        log.warning("auction.com: Playwright not available, skipping")
         return results
-    soup = BeautifulSoup(r.text, "lxml")
-    for card in soup.select("[data-testid='property-card'], .propertyCard, .property-card"):
+
+    log.info("auction.com: trying browser scrape%s",
+             " (with login)" if AUCTION_COM_EMAIL else "")
+    html = browser_get_html(
+        "https://www.auction.com/foreclosure/real-estate/fl/?state=FL"
+        "&county=Bay%2CGulf%2CWalton%2COkaloosa%2CWashington",
+        wait_selector="[data-testid='property-card'], .propertyCard",
+        login_fn=_auction_login if AUCTION_COM_EMAIL else None,
+    )
+    if not html:
+        return results
+
+    soup = BeautifulSoup(html, "lxml")
+    for card in soup.select(
+        "[data-testid='property-card'], .propertyCard, "
+        ".property-card, [class*='PropertyCard']"
+    ):
         try:
-            addr  = card.select_one(".address, [data-testid='address']")
-            price = card.select_one(".price, [data-testid='price']")
+            addr  = card.select_one(".address, [data-testid='address'], [class*='address']")
+            price = card.select_one(".price, [data-testid='price'], [class*='price']")
             link  = card.select_one("a[href*='/residential/']") or card.select_one("a")
             if not addr:
                 continue
             href    = link["href"] if link else ""
             url     = href if href.startswith("http") else "https://www.auction.com" + href
-            raw_p   = price.get_text(strip=True) if price else ""
-            bid_int = int("".join(c for c in raw_p if c.isdigit())) if raw_p else None
+            bid_int = clean_price(price.get_text(strip=True)) if price else None
             results.append(Property(
                 id=listing_id(url), address=addr.get_text(" ", strip=True),
                 county="FL", type="Single Family",
                 beds=None, baths=None, acreage=None,
                 bidPrice=bid_int, auctionDate=None,
                 auctionSite="auction.com", caseNumber=listing_id(url),
-                propertyUrl=url, imageUrl=None, notes="Via auction.com",
-                listingFoundAt=datetime.now(timezone.utc).isoformat(),
+                propertyUrl=url, imageUrl=None,
+                notes="Via auction.com (browser)",
+                listingFoundAt=now_iso,
             ))
         except Exception as e:
             log.debug("auction.com card: %s", e)
-    log.info("auction.com (html) -> %d listings", len(results))
+
+    log.info("auction.com (browser) -> %d listings", len(results))
     return results
+
+
+# --- hubzu.com ---------------------------------------------------------------
+
+def _hubzu_login(page):
+    if not HUBZU_EMAIL:
+        return
+    try:
+        page.goto("https://www.hubzu.com/login", timeout=20000,
+                  wait_until="domcontentloaded")
+        page.wait_for_timeout(1500)
+        page.fill("input[name='username'], input[type='email']", HUBZU_EMAIL)
+        page.fill("input[name='password'], input[type='password']", HUBZU_PASS)
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(3000)
+        log.info("hubzu login submitted")
+    except Exception as e:
+        log.warning("hubzu login: %s", e)
 
 
 def parse_hubzu() -> list:
     results = []
-    r = get("https://www.hubzu.com/search/?state=FL&county=Bay,Gulf,Walton,Okaloosa")
-    if not r:
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    if not PLAYWRIGHT_AVAILABLE:
+        log.warning("hubzu: Playwright not available, skipping")
         return results
-    soup = BeautifulSoup(r.text, "lxml")
-    for card in soup.select(".property-listing, .listing-card, [class*='propertyCard']"):
+
+    log.info("hubzu: browser scrape%s", " (with login)" if HUBZU_EMAIL else "")
+    html = browser_get_html(
+        "https://www.hubzu.com/search?state=FL"
+        "&county=Bay,Gulf,Walton,Okaloosa,Washington",
+        wait_selector=".listing-card, [class*='propertyCard'], [class*='listing']",
+        login_fn=_hubzu_login if HUBZU_EMAIL else None,
+    )
+    if not html:
+        return results
+
+    soup = BeautifulSoup(html, "lxml")
+    for card in soup.select(
+        ".property-listing, .listing-card, [class*='propertyCard'], "
+        "[class*='PropertyCard'], [class*='listing-item']"
+    ):
         try:
-            addr  = card.select_one(".property-address, .address")
-            price = card.select_one(".listing-price, .price, .bid-price")
-            link  = card.select_one("a[href*='/real-estate/']") or card.select_one("a")
+            addr  = card.select_one(".property-address, .address, [class*='address']")
+            price = card.select_one(".listing-price, .price, .bid-price, [class*='price']")
+            link  = card.select_one("a[href*='/property/'], a[href*='/real-estate/']") \
+                    or card.select_one("a")
             if not addr:
                 continue
             href    = link["href"] if link else ""
             url     = href if href.startswith("http") else "https://www.hubzu.com" + href
-            raw_p   = price.get_text(strip=True) if price else ""
-            bid_int = int("".join(c for c in raw_p if c.isdigit())) if raw_p else None
+            bid_int = clean_price(price.get_text(strip=True)) if price else None
             results.append(Property(
                 id=listing_id(url), address=addr.get_text(" ", strip=True),
                 county="FL", type="Single Family",
                 beds=None, baths=None, acreage=None,
                 bidPrice=bid_int, auctionDate=None,
                 auctionSite="hubzu.com", caseNumber=listing_id(url),
-                propertyUrl=url, imageUrl=None, notes="Via Hubzu - bank-owned REO.",
-                listingFoundAt=datetime.now(timezone.utc).isoformat(),
+                propertyUrl=url, imageUrl=None,
+                notes="Via Hubzu - bank-owned REO (browser).",
+                listingFoundAt=now_iso,
             ))
         except Exception as e:
             log.debug("hubzu card: %s", e)
-    log.info("hubzu -> %d listings", len(results))
+
+    log.info("hubzu (browser) -> %d listings", len(results))
     return results
+
+
+# --- xome.com ----------------------------------------------------------------
+
+def _xome_login(page):
+    if not XOME_EMAIL:
+        return
+    try:
+        page.goto("https://www.xome.com/login", timeout=20000,
+                  wait_until="domcontentloaded")
+        page.wait_for_timeout(1500)
+        page.fill("input[type='email']", XOME_EMAIL)
+        page.fill("input[type='password']", XOME_PASS)
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(3000)
+        log.info("xome login submitted")
+    except Exception as e:
+        log.warning("xome login: %s", e)
 
 
 def parse_xome() -> list:
     results = []
-    r = get(
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # Try JSON API first
+    r = get_r(
         "https://www.xome.com/api/search/auction",
         params={"state": "FL", "county": "Bay,Gulf,Walton,Okaloosa", "pageSize": 50}
     )
-    if not r:
+    if r:
+        try:
+            data = r.json()
+            for p in data.get("listings", data.get("results", [])):
+                slug = p.get("slug") or p.get("id", "")
+                results.append(Property(
+                    id=listing_id(str(slug)), address=p.get("address", ""),
+                    county=p.get("county", "FL"), type=p.get("propertyType", "Single Family"),
+                    beds=p.get("beds"), baths=p.get("baths"),
+                    acreage=p.get("lotSizeAcres"),
+                    bidPrice=p.get("listPrice") or p.get("openingBid"),
+                    auctionDate=p.get("auctionDate"),
+                    auctionSite="xome.com", caseNumber=str(slug),
+                    propertyUrl=f"https://www.xome.com/homes-for-sale/{slug}",
+                    imageUrl=p.get("primaryPhotoUrl"),
+                    notes=str(p.get("description", ""))[:300],
+                    listingFoundAt=now_iso,
+                ))
+            if results:
+                log.info("xome (API) -> %d listings", len(results))
+                return results
+        except Exception as e:
+            log.warning("xome API: %s", e)
+
+    if not PLAYWRIGHT_AVAILABLE:
+        log.warning("xome: Playwright not available, skipping")
         return results
-    try:
-        for p in r.json().get("listings", r.json().get("results", [])):
-            slug = p.get("slug") or p.get("id", "")
-            results.append(Property(
-                id=listing_id(str(slug)), address=p.get("address", ""),
-                county=p.get("county", "FL"), type=p.get("propertyType", "Single Family"),
-                beds=p.get("beds"), baths=p.get("baths"), acreage=p.get("lotSizeAcres"),
-                bidPrice=p.get("listPrice") or p.get("openingBid"),
-                auctionDate=p.get("auctionDate"),
-                auctionSite="xome.com", caseNumber=str(slug),
-                propertyUrl=f"https://www.xome.com/homes-for-sale/{slug}",
-                imageUrl=p.get("primaryPhotoUrl"),
-                notes=str(p.get("description", ""))[:300],
-                listingFoundAt=datetime.now(timezone.utc).isoformat(),
-            ))
-    except Exception as e:
-        log.warning("xome json: %s", e)
-    log.info("xome -> %d listings", len(results))
-    return results
 
-
-def parse_hud() -> list:
-    results = []
-    kw = {"headers": {**HEADERS, "X-API-KEY": HUD_API_KEY}} if HUD_API_KEY else {}
-    r  = get(
-        "https://www.hudhomestore.gov/HUDApi/ListingSearch",
-        params={"stateCode": "FL", "county": "Bay", "pageSize": 50},
-        **kw
+    log.info("xome: browser scrape%s", " (with login)" if XOME_EMAIL else "")
+    html = browser_get_html(
+        "https://www.xome.com/real-estate-auctions/for-sale?state=FL"
+        "&county=Bay,Gulf,Walton,Okaloosa,Washington",
+        wait_selector="[class*='listing'], [class*='property-card']",
+        login_fn=_xome_login if XOME_EMAIL else None,
     )
-    if not r:
+    if not html:
         return results
-    try:
-        for p in r.json().get("properties", r.json().get("results", [])):
-            prop_id = str(p.get("listingId", p.get("caseNumber", "")))
+
+    soup = BeautifulSoup(html, "lxml")
+    for card in soup.select(
+        "[class*='ListingCard'], [class*='PropertyCard'], "
+        ".listing-card, [class*='property-item']"
+    ):
+        try:
+            addr  = card.select_one("[class*='address'], [class*='Address']")
+            price = card.select_one("[class*='price'], [class*='Price']")
+            link  = card.select_one("a") 
+            if not addr:
+                continue
+            href = link["href"] if link else ""
+            url  = href if href.startswith("http") else "https://www.xome.com" + href
             results.append(Property(
-                id=listing_id(prop_id),
-                address=f"{p.get('streetAddr','')} {p.get('city','')} FL {p.get('zip','')}".strip(),
-                county=f"{p.get('county','FL')} FL",
-                type=p.get("propType", "Single Family"),
-                beds=p.get("bedroom"), baths=p.get("bath"), acreage=None,
-                bidPrice=int(p.get("listPrice", 0) or 0) or None,
-                auctionDate=p.get("listingDate"),
-                auctionSite="hudhomestore.com", caseNumber=prop_id,
-                propertyUrl=f"https://www.hudhomestore.gov/Listing/PropertySearch.aspx?sState=FL&sCaseNumber={prop_id}",
-                imageUrl=None,
-                notes=f"HUD FHA foreclosure. Case #{prop_id}.",
-                listingFoundAt=datetime.now(timezone.utc).isoformat(),
+                id=listing_id(url), address=addr.get_text(" ", strip=True),
+                county="FL", type="Single Family",
+                beds=None, baths=None, acreage=None,
+                bidPrice=clean_price(price.get_text()) if price else None,
+                auctionDate=None,
+                auctionSite="xome.com", caseNumber=listing_id(url),
+                propertyUrl=url, imageUrl=None,
+                notes="Via Xome (browser).",
+                listingFoundAt=now_iso,
             ))
-    except Exception as e:
-        log.warning("HUD json: %s", e)
-    log.info("HUD -> %d listings", len(results))
+        except Exception as e:
+            log.debug("xome card: %s", e)
+
+    log.info("xome (browser) -> %d listings", len(results))
     return results
 
+
+# --- govdeals.com ------------------------------------------------------------
 
 def parse_govdeals() -> list:
     results = []
-    r = get(
-        "https://www.govdeals.com/index.cfm?fa=Main.AdvSearchResultsNew"
-        "&searchPg=1&category=0058&state=FL"
-    )
-    if not r:
-        return results
-    soup = BeautifulSoup(r.text, "lxml")
-    for item in soup.select(".itemListing, .listing-item"):
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    if not PLAYWRIGHT_AVAILABLE:
+        # Try plain requests as fallback
+        r = get_r(
+            "https://www.govdeals.com/index.cfm?fa=Main.AdvSearchResultsNew"
+            "&searchPg=1&category=0058&state=FL"
+        )
+        if not r:
+            return results
+        soup = BeautifulSoup(r.text, "lxml")
+    else:
+        log.info("govdeals: browser scrape")
+        html = browser_get_html(
+            "https://www.govdeals.com/index.cfm?fa=Main.AdvSearchResultsNew"
+            "&searchPg=1&category=0058&state=FL",
+            wait_selector=".itemListing, .listing-item, [class*='listing']",
+        )
+        if not html:
+            return results
+        soup = BeautifulSoup(html, "lxml")
+
+    for item in soup.select(".itemListing, .listing-item, [class*='item-card']"):
         try:
-            title = item.select_one(".itemTitle, .item-title, h3")
-            price = item.select_one(".currentBid, .current-bid, .price")
-            link  = item.select_one("a[href*='itemno'], a[href*='item']")
+            title = item.select_one(".itemTitle, .item-title, h3, h2")
+            price = item.select_one(".currentBid, .current-bid, .price, [class*='bid']")
+            link  = item.select_one("a[href*='itemno'], a[href*='item'], a")
             if not title:
                 continue
             href    = link["href"] if link else ""
             url     = href if href.startswith("http") else "https://www.govdeals.com" + href
-            bid_int = int("".join(
-                c for c in (price.get_text(strip=True) if price else "") if c.isdigit()
-            )) or None
+            bid_int = clean_price(price.get_text()) if price else None
             results.append(Property(
                 id=listing_id(url), address=title.get_text(" ", strip=True),
                 county="FL", type="Mixed Use",
@@ -436,10 +625,11 @@ def parse_govdeals() -> list:
                 auctionSite="govdeals.com", caseNumber=listing_id(url),
                 propertyUrl=url, imageUrl=None,
                 notes="Government surplus / tax deed sale.",
-                listingFoundAt=datetime.now(timezone.utc).isoformat(),
+                listingFoundAt=now_iso,
             ))
         except Exception:
             pass
+
     log.info("govdeals -> %d listings", len(results))
     return results
 
@@ -450,7 +640,7 @@ def parse_govdeals() -> list:
 
 def fetch_active_watchers() -> list:
     if not CRM_API_KEY:
-        log.warning("CRM_API_KEY not set - skipping watcher match & alerts")
+        log.warning("CRM_API_KEY not set — skipping watcher alerts")
         return []
     try:
         r = requests.get(
@@ -533,32 +723,24 @@ def fire_crm_alert(prop: Property, watcher: dict):
             "isNew":          prop.isNew,
         },
     }
-    ok     = post_json(CRM_WEBHOOK_URL, payload)
-    status = "OK" if ok else "FAIL"
-    log.info("CRM alert [%s] -> %s | %s", status, watcher.get("email", "?"), prop.address)
+    ok = post_json(CRM_WEBHOOK_URL, payload)
+    log.info("CRM alert [%s] -> %s | %s",
+             "OK" if ok else "FAIL", watcher.get("email", "?"), prop.address)
 
 
 # ============================================================================
-# FEED WRITER  — with empty-result safety guard
+# FEED WRITER — with empty-result safety guard
 # ============================================================================
 
 def write_feed(listings: list):
-    """
-    Write docs/feed.json.
-    SAFETY: if the scraper returns 0 listings (site down / blocked / no results),
-    keep the existing feed.json rather than overwriting it with an empty array.
-    This prevents the watch app from going blank due to a transient scrape failure.
-    """
     FEED_PATH.parent.mkdir(parents=True, exist_ok=True)
-
     if len(listings) < MIN_LISTINGS_TO_OVERWRITE:
         log.warning(
-            "Scraper returned %d listings (below threshold %d) — "
-            "keeping existing feed.json to avoid blanking the app.",
+            "Scraper returned %d listings (threshold: %d) — "
+            "preserving existing feed.json",
             len(listings), MIN_LISTINGS_TO_OVERWRITE
         )
         return
-
     feed = {
         "generated": datetime.now(timezone.utc).isoformat(),
         "source":    "PP Investments Foreclosure Watch Scraper",
@@ -574,12 +756,14 @@ def write_feed(listings: list):
 # ============================================================================
 
 def run_once():
-    log.info("=== PP Investments Scraper run started ===")
+    log.info("=== PP Investments Scraper v3 — run started ===")
+    log.info("Playwright available: %s", PLAYWRIGHT_AVAILABLE)
+
     seen     = load_seen()
     all_new  = []
     all_kept = []
     watchers = fetch_active_watchers()
-    log.info("Loaded %d active watchers from CRM", len(watchers))
+    log.info("Active watchers: %d", len(watchers))
 
     parsers = (
         [lambda s=s, c=c: parse_realforeclose(s, c) for s, c in REALFORECLOSE_COUNTIES]
@@ -590,7 +774,7 @@ def run_once():
         try:
             listings = fn()
         except Exception as e:
-            log.error("Parser error: %s", e)
+            log.error("Parser %s error: %s", getattr(fn, "__name__", "?"), e)
             listings = []
 
         for prop in listings:
@@ -599,9 +783,9 @@ def run_once():
                 prop.isNew = True
                 all_new.append(prop)
                 seen.add(prop.id)
-                for watcher in watchers:
-                    if matches_watcher(prop, watcher):
-                        fire_crm_alert(prop, watcher)
+                for w in watchers:
+                    if matches_watcher(prop, w):
+                        fire_crm_alert(prop, w)
                         time.sleep(0.3)
             else:
                 prop.isNew = False
