@@ -1,0 +1,55 @@
+name: PP Investments Foreclosure Scraper
+
+on:
+  schedule:
+    - cron: '0 6,12,18 * * *'   # 6 AM, 12 PM, 6 PM UTC (1am/7am/1pm CT)
+  workflow_dispatch:              # Manual trigger from Actions tab
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  scrape-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r scraper/requirements.txt
+
+      - name: Run scraper
+        env:
+          CRM_WEBHOOK_URL:  ${{ secrets.CRM_WEBHOOK_URL }}
+          CRM_API_KEY:      ${{ secrets.CRM_API_KEY }}
+          HUD_API_KEY:      ${{ secrets.HUD_API_KEY }}
+          GOVDEALS_API_KEY: ${{ secrets.GOVDEALS_API_KEY }}
+          FEED_OUTPUT_PATH: docs/feed.json
+        run: python scraper/scraper.py
+
+      - name: Commit updated feed.json
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/feed.json scraper/.seen.json || true
+          git diff --staged --quiet || git commit -m "chore: scraper update $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          git push
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
