@@ -1,0 +1,61 @@
+{
+  "generated": "2026-08-31T12:00:00Z",
+  "source": "PP Investments Foreclosure Watch Scraper",
+  "count": 3,
+  "listings": [
+    {
+      "id": "a1b2c3d4e5f6",
+      "address": "1234 Beachview Dr, Panama City, FL 32401",
+      "county": "Bay FL",
+      "type": "Single Family",
+      "beds": 3,
+      "baths": 2,
+      "acreage": null,
+      "bidPrice": 125000,
+      "auctionDate": "2026-09-18T10:00:00-05:00",
+      "auctionSite": "bay.realforeclose.com",
+      "caseNumber": "2026-CA-001234",
+      "propertyUrl": "https://bay.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=preview&AUCTIONID=12345",
+      "imageUrl": null,
+      "notes": "3/2 block home near the bay. Sold as-is. Minimum bid $125,000.",
+      "listingFoundAt": "2026-08-31T06:00:00Z",
+      "isNew": true
+    },
+    {
+      "id": "b2c3d4e5f6a1",
+      "address": "78 Cypress Ct, Port St. Joe, FL 32456",
+      "county": "Gulf FL",
+      "type": "Land/Lot",
+      "beds": null,
+      "baths": null,
+      "acreage": 2.1,
+      "bidPrice": 48000,
+      "auctionDate": "2026-09-22T10:00:00-05:00",
+      "auctionSite": "gulf.realforeclose.com",
+      "caseNumber": "2026-GC-000412",
+      "propertyUrl": "https://gulf.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=preview&AUCTIONID=412",
+      "imageUrl": null,
+      "notes": "2.1 acres cleared and ready to build. Corner lot, paved road access.",
+      "listingFoundAt": "2026-08-31T06:00:00Z",
+      "isNew": true
+    },
+    {
+      "id": "c3d4e5f6a1b2",
+      "address": "4567 Front Beach Rd, Panama City Beach, FL 32408",
+      "county": "Bay FL",
+      "type": "Single Family",
+      "beds": 3,
+      "baths": 2,
+      "acreage": 0.25,
+      "bidPrice": 215000,
+      "auctionDate": "2026-09-30T11:00:00-05:00",
+      "auctionSite": "auction.com",
+      "caseNumber": "AC-FL-558201",
+      "propertyUrl": "https://www.auction.com/residential/4567-front-beach-rd-panama-city-beach-fl-32408/",
+      "imageUrl": "https://images.auction.com/photos/ac-fl-558201-main.jpg",
+      "notes": "Waterfront investment property, walk to beach. Tenant occupied. Bank-owned.",
+      "listingFoundAt": "2026-08-31T06:00:00Z",
+      "isNew": false
+    }
+  ]
+}
