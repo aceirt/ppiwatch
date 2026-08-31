@@ -45,6 +45,8 @@ REALFORECLOSE_USER   = os.getenv("REALFORECLOSE_USER",   "")
 REALFORECLOSE_PASS   = os.getenv("REALFORECLOSE_PASS",   "")
 HAS_RF_CREDS         = bool(REALFORECLOSE_USER and REALFORECLOSE_PASS)
 
+_LOGIN_DEBUG: dict = {}  # populated by _rf_login; written into feed for diagnostics
+
 AUCTION_COM_EMAIL    = os.getenv("AUCTION_COM_EMAIL",    "")
 AUCTION_COM_PASS     = os.getenv("AUCTION_COM_PASS",     "")
 HUBZU_EMAIL          = os.getenv("HUBZU_EMAIL",          "")
@@ -208,7 +210,13 @@ def _rf_login(session: requests.Session, site: str) -> bool:
             timeout=15,
         )
         ok = '"isOk":"YES"' in r.text or '"isOk": "YES"' in r.text
-        log.info("%s login: %s", site, "OK" if ok else "FAILED")
+        _LOGIN_DEBUG[site] = {
+            "has_creds": HAS_RF_CREDS,
+            "http_status": r.status_code,
+            "response_preview": r.text[:300].strip(),
+            "result": "OK" if ok else "FAILED",
+        }
+        log.info("%s login: %s  |  response[:80]: %s", site, "OK" if ok else "FAILED", r.text[:80])
         return ok
     except Exception as e:
         log.warning("%s login error: %s", site, e)
@@ -314,6 +322,8 @@ def parse_realforeclose(slug: str, county: str) -> list:
              slug, len(upcoming), " (will authenticate)" if HAS_RF_CREDS else "")
 
     # Attempt login once per portal
+    if not HAS_RF_CREDS:
+        _LOGIN_DEBUG[f"{slug}.realforeclose.com"] = {"has_creds": False, "result": "SKIPPED"}
     authed = _rf_login(session, f"{slug}.realforeclose.com") if HAS_RF_CREDS else False
 
     for d in upcoming:
@@ -796,6 +806,7 @@ def write_feed(listings: list):
         "generated": now_iso(),
         "source":    "PP Investments Foreclosure Watch Scraper v4",
         "count":     len(listings),
+        "loginDebug": _LOGIN_DEBUG,
         "listings":  [p.to_dict() for p in listings],
     }
     FEED_PATH.write_text(json.dumps(feed, indent=2, default=str))
