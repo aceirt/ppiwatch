@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PP Investments - Foreclosure & Auction Watch Scraper v4
+PP Investments - Foreclosure & Auction Watch Scraper v5
 Authenticated realforeclose.com scraping (AJAX login + per-case detail)
 ported from scrape-live.ts. Falls back to calendar-only when no creds.
 
@@ -44,8 +44,6 @@ CRM_LOCATION_ID      = "KoyfEHXBmxbD69hWgYyJ"
 REALFORECLOSE_USER   = os.getenv("REALFORECLOSE_USER",   "")
 REALFORECLOSE_PASS   = os.getenv("REALFORECLOSE_PASS",   "")
 HAS_RF_CREDS         = bool(REALFORECLOSE_USER and REALFORECLOSE_PASS)
-
-_LOGIN_DEBUG: dict = {}  # populated by _rf_login; written into feed for diagnostics
 
 AUCTION_COM_EMAIL    = os.getenv("AUCTION_COM_EMAIL",    "")
 AUCTION_COM_PASS     = os.getenv("AUCTION_COM_PASS",     "")
@@ -149,6 +147,14 @@ def clean_price(text: str) -> Optional[int]:
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
+def _is_calendar_marker(prop) -> bool:
+    """True if entry is a county-level date placeholder with no real data."""
+    return (
+        bool(re.match(r".+ County Foreclosure Auction — \d{2}/\d{2}/\d{4}$", prop.address))
+        and not prop.bidPrice
+    )
+
+
 def get_r(url, *, session=None, timeout=20, **kw) -> Optional[requests.Response]:
     try:
         fn = session.get if session else requests.get
@@ -210,13 +216,7 @@ def _rf_login(session: requests.Session, site: str) -> bool:
             timeout=15,
         )
         ok = '"isOk":"YES"' in r.text or '"isOk": "YES"' in r.text
-        _LOGIN_DEBUG[site] = {
-            "has_creds": HAS_RF_CREDS,
-            "http_status": r.status_code,
-            "response_preview": r.text[:300].strip(),
-            "result": "OK" if ok else "FAILED",
-        }
-        log.info("%s login: %s  |  response[:80]: %s", site, "OK" if ok else "FAILED", r.text[:80])
+        log.info("%s login: %s", site, "OK" if ok else "FAILED")
         return ok
     except Exception as e:
         log.warning("%s login error: %s", site, e)
@@ -292,6 +292,32 @@ def _rf_parse_cases(html: str, site: str) -> list:
     return cases
 
 
+
+def _rf_enrich_case(session: requests.Session, site: str, auction_id: str) -> dict:
+    """Fetch the DETAILS page to recover address/bid/parcel when PREVIEW parse missed them."""
+    url = f"https://{site}/index.cfm?zaction=AUCTION&zmethod=DETAILS&AuctionID={auction_id}"
+    r   = get_r(url, session=session, timeout=20)
+    if not r:
+        return {}
+    soup = BeautifulSoup(r.text, "lxml")
+    text = soup.get_text(" ", strip=True)
+    addr_m   = re.search(
+        r'\b\d+\s+[\w.\-]+\s+'
+        r'(?:St|Street|Dr|Drive|Ave|Avenue|Blvd|Boulevard|Rd|Road|'
+        r'Ln|Lane|Way|Ct|Court|Pkwy|Parkway|Hwy|Highway|Pl|Place|'
+        r'Ter|Terrace|Cir|Circle)\b[^,\n]*',
+        text, re.I
+    )
+    dollar_m = re.search(r'\$[\d,]+(?:\.\d{2})?', text)
+    parcel_m = re.search(r'(?:Parcel|PIN|Folio)\s*#?\s*:?\s*([A-Z0-9\-]+)', text, re.I)
+    return {
+        "address":   addr_m.group(0).strip()                       if addr_m   else None,
+        "bidPrice":  int(re.sub(r"[^\d]", "", dollar_m.group(0))) if dollar_m else None,
+        "parcelId":  parcel_m.group(1)                             if parcel_m else None,
+        "detailUrl": url,
+    }
+
+
 def parse_realforeclose(slug: str, county: str) -> list:
     """
     Scrape one realforeclose.com county portal.
@@ -322,8 +348,6 @@ def parse_realforeclose(slug: str, county: str) -> list:
              slug, len(upcoming), " (will authenticate)" if HAS_RF_CREDS else "")
 
     # Attempt login once per portal
-    if not HAS_RF_CREDS:
-        _LOGIN_DEBUG[f"{slug}.realforeclose.com"] = {"has_creds": False, "result": "SKIPPED"}
     authed = _rf_login(session, f"{slug}.realforeclose.com") if HAS_RF_CREDS else False
 
     for d in upcoming:
@@ -333,6 +357,17 @@ def parse_realforeclose(slug: str, county: str) -> list:
         if authed:
             date_r = get_r(preview_url, session=session)
             cases  = _rf_parse_cases(date_r.text, f"{slug}.realforeclose.com") if date_r else []
+            if cases:
+                # Enrich cases whose address fell back to "Auction ID XXX"
+                for c in cases:
+                    if c["address"].startswith("Auction ID "):
+                        enriched = _rf_enrich_case(session, f"{slug}.realforeclose.com", c["auctionId"])
+                        if enriched.get("address"):  c["address"]    = enriched["address"]
+                        if enriched.get("bidPrice"): c["bidPrice"]   = enriched["bidPrice"]
+                        if enriched.get("parcelId"): c["parcelId"]   = enriched["parcelId"]
+                        if enriched.get("detailUrl"):c["propertyUrl"]= enriched["detailUrl"]
+                # Drop cases still lacking both address and bid — pure empty scaffolding
+                cases = [c for c in cases if not (c["address"].startswith("Auction ID ") and not c["bidPrice"])]
             if cases:
                 for c in cases:
                     results.append(Property(
@@ -798,15 +833,20 @@ def fire_crm_alert(prop: Property, watcher: dict):
 
 def write_feed(listings: list):
     FEED_PATH.parent.mkdir(parents=True, exist_ok=True)
+    # Drop calendar-only date placeholders (render as broken "TBD" cards in the app)
+    real_listings = [p for p in listings if not _is_calendar_marker(p)]
+    dropped = len(listings) - len(real_listings)
+    if dropped:
+        log.info("Filtered %d calendar-only markers from feed", dropped)
+    listings = real_listings
     if len(listings) < MIN_LISTINGS_TO_OVERWRITE:
         log.warning("Scraper returned %d listings (threshold %d) — preserving existing feed",
                     len(listings), MIN_LISTINGS_TO_OVERWRITE)
         return
     feed = {
         "generated": now_iso(),
-        "source":    "PP Investments Foreclosure Watch Scraper v4",
+        "source":    "PP Investments Foreclosure Watch Scraper v5",
         "count":     len(listings),
-        "loginDebug": _LOGIN_DEBUG,
         "listings":  [p.to_dict() for p in listings],
     }
     FEED_PATH.write_text(json.dumps(feed, indent=2, default=str))
@@ -820,7 +860,7 @@ def write_feed(listings: list):
 # ===========================================================================
 
 def run_once():
-    log.info("=== PP Investments Scraper v4 — run started ===")
+    log.info("=== PP Investments Scraper v5 — run started ===")
     log.info("realforeclose auth: %s | Playwright: %s",
              "YES" if HAS_RF_CREDS else "NO",
              "YES" if PLAYWRIGHT_AVAILABLE else "NO")
