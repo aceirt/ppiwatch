@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PP Investments - Foreclosure & Auction Watch Scraper v6
+PP Investments - Foreclosure & Auction Watch Scraper v7
 Authenticated realforeclose.com scraping (AJAX login + per-case detail)
 ported from scrape-live.ts. Falls back to calendar-only when no creds.
 
@@ -799,10 +799,23 @@ def matches_watcher(prop: Property, watcher: dict) -> bool:
     if exc_kw and     any(k in text for k in exc_kw): return False
     return True
 
-# CRM field IDs for match-alert custom fields
+# CRM custom field IDs — match-alert fields (used by email template merge tags)
 MATCH_ALERT_FIELD_ADDRESS   = "fVJxlefxB0xVhCVxvA3w"
 MATCH_ALERT_FIELD_SUMMARY   = "RYEncSxTF2OSJGmVaZtu"
 MATCH_ALERT_FIELD_WATCHLIST = "90UFlXz6MffRwNd5SYmJ"
+
+# CRM custom field IDs — property alert fields (used by email template merge tags)
+PROP_FIELD_ADDRESS   = "ui320qyOyGLYLu7r9n7f"
+PROP_FIELD_TYPE      = "UEA4nnFoTcC5qHFRDHXB"
+PROP_FIELD_COUNTY    = "7AlGQ5OYeGuF9ipF2UUR"
+PROP_FIELD_DATE      = "8i6F4uqG3Zc1y6ShRAfX"
+PROP_FIELD_BEDS      = "BZuuDdhYrENPRrvpprfq"
+PROP_FIELD_BATHS     = "9PRHtFKhmC2uKZLiG486"
+PROP_FIELD_PRICE     = "T3RC4uv0pThcy5SR8ZTj"
+PROP_FIELD_SITE      = "kMKCRQ7dsUDBkcM8rLgZ"
+PROP_FIELD_CASE      = "wZwhyn0FC9XgqSPOIL9I"
+PROP_FIELD_ACREAGE   = "bXrxV4PVKE7FYv9Jg5ai"
+PROP_FIELD_NOTES     = "UrtpGT74EKWQIezYtiaj"
 
 # Workflow ID for the Property Alert Webhook workflow
 PROPERTY_ALERT_WORKFLOW_ID  = "cd111f23-2915-45e1-85f6-00edf1bffcdd"
@@ -831,19 +844,35 @@ def _build_summary(prop: Property, watch_list_name: str) -> str:
 
 def _update_contact_alert_fields(contact_id: str, prop: Property, watch_list_name: str) -> bool:
     """
-    Step 1: Update the contact's 3 match-alert custom fields with fresh
-    property data so the email template merge tags render correctly.
+    Step 1: Update ALL property + match-alert custom fields with fresh data
+    so every email template merge tag renders the correct property details.
+    Covers both {{contact.property_address}} and {{contact.match_alert_address}} families.
     """
     if not CRM_API_KEY:
         return False
-    summary = _build_summary(prop, watch_list_name)
-    body = {
-        "customFields": [
-            {"id": MATCH_ALERT_FIELD_ADDRESS,   "field_value": prop.address},
-            {"id": MATCH_ALERT_FIELD_SUMMARY,   "field_value": summary},
-            {"id": MATCH_ALERT_FIELD_WATCHLIST, "field_value": watch_list_name},
-        ]
-    }
+    summary   = _build_summary(prop, watch_list_name)
+    date_str  = (prop.auctionDate or "")[:10].replace("-", "/") if prop.auctionDate else ""
+    price_str = f"${prop.bidPrice:,}" if prop.bidPrice else ""
+    acreage_str = f"{prop.acreage} acres" if prop.acreage else ""
+    fields = [
+        # Property alert fields (used by Foreclosure Property Alert email template)
+        {"id": PROP_FIELD_ADDRESS, "field_value": prop.address},
+        {"id": PROP_FIELD_TYPE,    "field_value": prop.type or ""},
+        {"id": PROP_FIELD_COUNTY,  "field_value": prop.county or ""},
+        {"id": PROP_FIELD_DATE,    "field_value": date_str},
+        {"id": PROP_FIELD_SITE,    "field_value": prop.auctionSite or ""},
+        {"id": PROP_FIELD_CASE,    "field_value": prop.caseNumber or ""},
+        {"id": PROP_FIELD_NOTES,   "field_value": prop.notes or ""},
+        # Match-alert fields (secondary merge tags)
+        {"id": MATCH_ALERT_FIELD_ADDRESS,   "field_value": prop.address},
+        {"id": MATCH_ALERT_FIELD_SUMMARY,   "field_value": summary},
+        {"id": MATCH_ALERT_FIELD_WATCHLIST, "field_value": watch_list_name},
+    ]
+    if prop.beds  is not None: fields.append({"id": PROP_FIELD_BEDS,    "field_value": str(int(prop.beds))})
+    if prop.baths is not None: fields.append({"id": PROP_FIELD_BATHS,   "field_value": str(int(prop.baths))})
+    if price_str:              fields.append({"id": PROP_FIELD_PRICE,   "field_value": price_str})
+    if acreage_str:            fields.append({"id": PROP_FIELD_ACREAGE, "field_value": acreage_str})
+    body = {"customFields": fields}
     try:
         r = requests.put(
             f"https://services.leadconnectorhq.com/contacts/{contact_id}",
@@ -928,7 +957,7 @@ def write_feed(listings: list):
         return
     feed = {
         "generated": now_iso(),
-        "source":    "PP Investments Foreclosure Watch Scraper v6",
+        "source":    "PP Investments Foreclosure Watch Scraper v7",
         "count":     len(listings),
         "listings":  [p.to_dict() for p in listings],
     }
@@ -943,7 +972,7 @@ def write_feed(listings: list):
 # ===========================================================================
 
 def run_once():
-    log.info("=== PP Investments Scraper v6 — run started ===")
+    log.info("=== PP Investments Scraper v7 — run started ===")
     log.info("realforeclose auth: %s | Playwright: %s",
              "YES" if HAS_RF_CREDS else "NO",
              "YES" if PLAYWRIGHT_AVAILABLE else "NO")
