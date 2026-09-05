@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PP Investments - Foreclosure & Auction Watch Scraper v5
+PP Investments - Foreclosure & Auction Watch Scraper v6
 Authenticated realforeclose.com scraping (AJAX login + per-case detail)
 ported from scrape-live.ts. Falls back to calendar-only when no creds.
 
@@ -799,32 +799,115 @@ def matches_watcher(prop: Property, watcher: dict) -> bool:
     if exc_kw and     any(k in text for k in exc_kw): return False
     return True
 
-def fire_crm_alert(prop: Property, watcher: dict):
-    if not CRM_WEBHOOK_URL: return
-    payload = {
-        "contactId":     watcher.get("id"),
-        "watchListName": _field(watcher,"watch_list_name"),
-        "alertFrequency":_field(watcher,"watch_alert_frequency") or "Immediate",
-        "watcher": {
-            "name":     watcher.get("contactName",""),
-            "email":    watcher.get("email",""),
-            "ccEmails": [e.strip() for e in _field(watcher,"watch_cc_emails").split(",") if e.strip()],
-            "phone":    watcher.get("phone",""),
-        },
-        "property": {
-            "address":       prop.address, "type":          prop.type,
-            "county":        prop.county,  "bidPrice":       prop.bidPrice,
-            "acreage":       prop.acreage, "beds":           prop.beds,
-            "baths":         prop.baths,   "auctionDate":    prop.auctionDate,
-            "auctionSite":   prop.auctionSite, "caseNumber": prop.caseNumber,
-            "propertyUrl":   prop.propertyUrl,  "imageUrl":  prop.imageUrl,
-            "notes":         prop.notes,
-            "listingFoundAt":prop.listingFoundAt, "isNew":  prop.isNew,
-        },
+# CRM field IDs for match-alert custom fields
+MATCH_ALERT_FIELD_ADDRESS   = "fVJxlefxB0xVhCVxvA3w"
+MATCH_ALERT_FIELD_SUMMARY   = "RYEncSxTF2OSJGmVaZtu"
+MATCH_ALERT_FIELD_WATCHLIST = "90UFlXz6MffRwNd5SYmJ"
+
+# Workflow ID for the Property Alert Webhook workflow
+PROPERTY_ALERT_WORKFLOW_ID  = "cd111f23-2915-45e1-85f6-00edf1bffcdd"
+
+
+def _build_summary(prop: Property, watch_list_name: str) -> str:
+    """Build a human-readable summary string for the match_alert_summary field."""
+    parts = []
+    parts.append(prop.type or "Property")
+    parts.append(prop.county or "")
+    if prop.beds and prop.baths:
+        parts.append(f"{int(prop.beds)}BR/{int(prop.baths)}BA")
+    elif prop.acreage:
+        parts.append(f"{prop.acreage} acres")
+    if prop.bidPrice:
+        parts.append(f"Bid ${prop.bidPrice:,}")
+    if prop.auctionDate:
+        try:
+            date_str = prop.auctionDate[:10]
+        except Exception:
+            date_str = str(prop.auctionDate)
+        parts.append(f"Auction {date_str}")
+    parts.append(f"on {prop.auctionSite}")
+    return " | ".join(p for p in parts if p)
+
+
+def _update_contact_alert_fields(contact_id: str, prop: Property, watch_list_name: str) -> bool:
+    """
+    Step 1: Update the contact's 3 match-alert custom fields with fresh
+    property data so the email template merge tags render correctly.
+    """
+    if not CRM_API_KEY:
+        return False
+    summary = _build_summary(prop, watch_list_name)
+    body = {
+        "customFields": [
+            {"id": MATCH_ALERT_FIELD_ADDRESS,   "field_value": prop.address},
+            {"id": MATCH_ALERT_FIELD_SUMMARY,   "field_value": summary},
+            {"id": MATCH_ALERT_FIELD_WATCHLIST, "field_value": watch_list_name},
+        ]
     }
-    ok = post_json(CRM_WEBHOOK_URL, payload)
-    log.info("CRM alert [%s] -> %s | %s",
-             "OK" if ok else "FAIL", watcher.get("email","?"), prop.address)
+    try:
+        r = requests.put(
+            f"https://services.leadconnectorhq.com/contacts/{contact_id}",
+            headers={"Authorization": f"Bearer {CRM_API_KEY}", "Version": "2021-07-28",
+                     "Content-Type": "application/json"},
+            json=body,
+            timeout=15,
+        )
+        r.raise_for_status()
+        return True
+    except Exception as e:
+        log.warning("CRM field update [%s]: %s", contact_id, e)
+        return False
+
+
+def _enroll_in_workflow(contact_id: str) -> bool:
+    """
+    Step 2: Enroll the contact directly in the Property Alert Webhook workflow.
+    This reliably resolves the contact (no webhook contact-lookup issues).
+    """
+    if not CRM_API_KEY:
+        return False
+    try:
+        r = requests.post(
+            f"https://services.leadconnectorhq.com/contacts/{contact_id}/workflow/{PROPERTY_ALERT_WORKFLOW_ID}",
+            headers={"Authorization": f"Bearer {CRM_API_KEY}", "Version": "2021-07-28",
+                     "Content-Type": "application/json"},
+            json={},
+            timeout=15,
+        )
+        r.raise_for_status()
+        return r.json().get("succeeded", False)
+    except Exception as e:
+        log.warning("CRM workflow enroll [%s]: %s", contact_id, e)
+        return False
+
+
+def fire_crm_alert(prop: Property, watcher: dict):
+    """
+    Send a property match alert to a watcher contact.
+    Two-step: update match_alert custom fields, then enroll in alert workflow.
+    This ensures the email template always renders fresh property data.
+    """
+    if not CRM_API_KEY:
+        log.warning("CRM_API_KEY not set — skipping alert for %s", watcher.get("email","?"))
+        return
+
+    contact_id     = watcher.get("id", "")
+    watch_list_name = _field(watcher, "watch_list_name") or "My Watch List"
+    email          = watcher.get("email", "?")
+
+    # Step 1 — write fresh property data to the 3 match-alert custom fields
+    fields_ok = _update_contact_alert_fields(contact_id, prop, watch_list_name)
+    if not fields_ok:
+        log.warning("CRM field update failed for %s — still attempting workflow enroll", email)
+
+    # Step 2 — enroll contact in the Property Alert Webhook workflow
+    time.sleep(0.5)   # brief pause so field update propagates before email renders
+    workflow_ok = _enroll_in_workflow(contact_id)
+
+    log.info("CRM alert [fields:%s workflow:%s] -> %s | %s",
+             "OK" if fields_ok else "FAIL",
+             "OK" if workflow_ok else "FAIL",
+             email, prop.address)
 
 
 # ===========================================================================
@@ -845,7 +928,7 @@ def write_feed(listings: list):
         return
     feed = {
         "generated": now_iso(),
-        "source":    "PP Investments Foreclosure Watch Scraper v5",
+        "source":    "PP Investments Foreclosure Watch Scraper v6",
         "count":     len(listings),
         "listings":  [p.to_dict() for p in listings],
     }
@@ -860,7 +943,7 @@ def write_feed(listings: list):
 # ===========================================================================
 
 def run_once():
-    log.info("=== PP Investments Scraper v5 — run started ===")
+    log.info("=== PP Investments Scraper v6 — run started ===")
     log.info("realforeclose auth: %s | Playwright: %s",
              "YES" if HAS_RF_CREDS else "NO",
              "YES" if PLAYWRIGHT_AVAILABLE else "NO")
