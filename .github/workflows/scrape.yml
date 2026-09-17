@@ -1,67 +1,92 @@
-name: PP Investments Foreclosure Scraper
+# PPI Property Watch — Live Scraper & Feed
+# ---------------------------------------------------------------------------
+# Drop this file into your GitHub Pages repo (aceirt/ppiwatch) at:
+#   .github/workflows/scrape.yml
+# alongside scrape-live.ts and feed.json (both at the repo root).
+#
+# It runs the live scraper on a schedule and auto-commits the refreshed
+# feed.json, so https://aceirt.github.io/ppiwatch/feed.json stays live with
+# zero upkeep. The scraper pulls the REAL public auction calendar from each
+# realforeclose.com county portal and merges it with the curated inventory.
+#
+# All actions pinned to versions that natively run on Node 24 (Node 20 was
+# deprecated on GitHub Actions runners as of 2025-09-19).
+# ---------------------------------------------------------------------------
+name: Scrape & publish feed
 
 on:
   schedule:
-    - cron: '0 6,12,18 * * *'   # 6 AM, 12 PM, 6 PM UTC (1am/7am/1pm CT)
-  workflow_dispatch:              # Manual trigger from Actions tab
+    # Every 2 hours — new auction dates appear in the app within ~60s of each run.
+    - cron: "0 */2 * * *"
+  workflow_dispatch: {}
 
 permissions:
   contents: write
   pages: write
   id-token: write
 
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
 jobs:
-  scrape-and-publish:
+  scrape:
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          fetch-depth: 0
+          bun-version: latest
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: pip
-
-      - name: Install Python dependencies
-        run: pip install -r scraper/requirements.txt
-
-      - name: Install Playwright browsers
-        run: playwright install chromium --with-deps
-
-      - name: Run scraper
+      - name: Scrape live sources
         env:
-          CRM_WEBHOOK_URL:      ${{ secrets.CRM_WEBHOOK_URL }}
-          CRM_API_KEY:          ${{ secrets.CRM_API_KEY }}
-          REALFORECLOSE_USER:   ${{ secrets.REALFORECLOSE_USER }}
-          REALFORECLOSE_PASS:   ${{ secrets.REALFORECLOSE_PASS }}
-          AUCTION_COM_EMAIL:    ${{ secrets.AUCTION_COM_EMAIL }}
-          AUCTION_COM_PASS:     ${{ secrets.AUCTION_COM_PASS }}
-          HUBZU_EMAIL:          ${{ secrets.HUBZU_EMAIL }}
-          HUBZU_PASS:           ${{ secrets.HUBZU_PASS }}
-          XOME_EMAIL:           ${{ secrets.XOME_EMAIL }}
-          XOME_PASS:            ${{ secrets.XOME_PASS }}
-          PROXY_URL:            ${{ secrets.PROXY_URL }}
-          HUD_API_KEY:          ${{ secrets.HUD_API_KEY }}
-          GOVDEALS_API_KEY:     ${{ secrets.GOVDEALS_API_KEY }}
-          FEED_OUTPUT_PATH:     docs/feed.json
-        run: python scraper/scraper.py
+          REALFORECLOSE_USER: ${{ secrets.REALFORECLOSE_USER }}
+          REALFORECLOSE_PASS: ${{ secrets.REALFORECLOSE_PASS }}
+        run: bun scrape-live.ts
 
-      - name: Commit updated feed
+      - name: Upload feed artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: feed-json
+          path: feed.json
+          retention-days: 1
+
+      - name: Commit refreshed feed.json
         run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/feed.json scraper/.seen.json || true
-          git diff --staged --quiet || git commit -m "chore: scraper update $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          git config user.name "ppi-scraper"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add feed.json
+          if git diff --staged --quiet; then
+            echo "No changes — feed.json already current."
+            exit 0
+          fi
+          git commit -m "chore: refresh feed.json [skip ci]"
           git push
+
+  # Deploy feed.json to GitHub Pages
+  deploy:
+    needs: scrape
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Download feed artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: feed-json
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/
+          path: feed.json
 
       - name: Deploy to GitHub Pages
+        id: deploy
         uses: actions/deploy-pages@v4
