@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-09T17:53:14.869Z",
+  "generatedAt": "2026-10-09T22:26:30.952Z",
   "source": "ppi-scraper-live-v1",
   "count": 76,
   "properties": [
@@ -19,12 +19,12 @@
       "parcelId": null,
       "propertyUrl": "https://bay.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=10/13/2026",
       "notes": "Live auction date from the county portal. No cases published for this date yet — check back closer to the sale.",
-      "listingFoundAt": "2026-10-09T17:53:07.008Z",
+      "listingFoundAt": "2026-10-09T22:26:23.749Z",
       "isLiveScrape": true,
       "lat": 30.16,
       "lng": -85.66,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:09.055Z"
+      "verifiedAt": "2026-10-09T22:26:25.724Z"
     },
     {
       "id": "bay.realforeclose.com-cal-10-14-2026",
@@ -42,12 +42,12 @@
       "parcelId": null,
       "propertyUrl": "https://bay.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=10/14/2026",
       "notes": "Live auction date from the county portal. No cases published for this date yet — check back closer to the sale.",
-      "listingFoundAt": "2026-10-09T17:53:07.135Z",
+      "listingFoundAt": "2026-10-09T22:26:23.881Z",
       "isLiveScrape": true,
       "lat": 30.16,
       "lng": -85.66,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:09.055Z"
+      "verifiedAt": "2026-10-09T22:26:25.724Z"
     },
     {
       "id": "walton.realforeclose.com-cal-10-13-2026",
@@ -65,12 +65,12 @@
       "parcelId": null,
       "propertyUrl": "https://walton.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=10/13/2026",
       "notes": "Live auction date from the county portal. No cases published for this date yet — check back closer to the sale.",
-      "listingFoundAt": "2026-10-09T17:53:07.975Z",
+      "listingFoundAt": "2026-10-09T22:26:24.727Z",
       "isLiveScrape": true,
       "lat": 30.4,
       "lng": -86.15,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:09.055Z"
+      "verifiedAt": "2026-10-09T22:26:25.724Z"
     },
     {
       "id": "walton.realforeclose.com-cal-10-15-2026",
@@ -88,12 +88,12 @@
       "parcelId": null,
       "propertyUrl": "https://walton.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=10/15/2026",
       "notes": "Live auction date from the county portal. No cases published for this date yet — check back closer to the sale.",
-      "listingFoundAt": "2026-10-09T17:53:08.135Z",
+      "listingFoundAt": "2026-10-09T22:26:24.877Z",
       "isLiveScrape": true,
       "lat": 30.4,
       "lng": -86.15,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:09.055Z"
+      "verifiedAt": "2026-10-09T22:26:25.724Z"
     },
     {
       "id": "washington.realforeclose.com-cal-10-14-2026",
@@ -111,12 +111,12 @@
       "parcelId": null,
       "propertyUrl": "https://washington.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=10/14/2026",
       "notes": "Live auction date from the county portal. No cases published for this date yet — check back closer to the sale.",
-      "listingFoundAt": "2026-10-09T17:53:08.918Z",
+      "listingFoundAt": "2026-10-09T22:26:25.594Z",
       "isLiveScrape": true,
       "lat": 30.78,
       "lng": -85.54,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:09.055Z"
+      "verifiedAt": "2026-10-09T22:26:25.724Z"
     },
     {
       "id": "washington.realforeclose.com-cal-10-28-2026",
@@ -134,12 +134,12 @@
       "parcelId": null,
       "propertyUrl": "https://washington.realforeclose.com/index.cfm?zaction=AUCTION&zmethod=PREVIEW&AuctionDate=10/28/2026",
       "notes": "Live auction date from the county portal. No cases published for this date yet — check back closer to the sale.",
-      "listingFoundAt": "2026-10-09T17:53:09.054Z",
+      "listingFoundAt": "2026-10-09T22:26:25.723Z",
       "isLiveScrape": true,
       "lat": 30.78,
       "lng": -85.54,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:09.055Z"
+      "verifiedAt": "2026-10-09T22:26:25.724Z"
     },
     {
       "id": "p-real-bay-1",
@@ -161,7 +161,7 @@
       "lat": 30.18,
       "lng": -85.83,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:09.055Z"
+      "verifiedAt": "2026-10-09T22:26:25.724Z"
     },
     {
       "id": "p1",
@@ -183,7 +183,7 @@
       "lat": 30.16,
       "lng": -85.66,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:09.056Z"
+      "verifiedAt": "2026-10-09T22:26:25.724Z"
     },
     {
       "id": "p2",
@@ -205,7 +205,7 @@
       "lat": 29.78,
       "lng": -85.3,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:09.095Z"
+      "verifiedAt": "2026-10-09T22:26:25.767Z"
     },
     {
       "id": "p3",
@@ -227,7 +227,7 @@
       "lat": 30.39,
       "lng": -86.42,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:09.137Z"
+      "verifiedAt": "2026-10-09T22:26:25.810Z"
     },
     {
       "id": "p4",
@@ -249,7 +249,7 @@
       "lat": 30.42,
       "lng": -86.62,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:09.181Z"
+      "verifiedAt": "2026-10-09T22:26:25.851Z"
     },
     {
       "id": "p5",
@@ -271,7 +271,7 @@
       "lat": 30.78,
       "lng": -85.54,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:09.508Z"
+      "verifiedAt": "2026-10-09T22:26:26.244Z"
     },
     {
       "id": "p6",
@@ -293,7 +293,7 @@
       "lat": 30.18,
       "lng": -85.83,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:09.552Z"
+      "verifiedAt": "2026-10-09T22:26:26.283Z"
     },
     {
       "id": "p7",
@@ -315,7 +315,7 @@
       "lat": 30.51,
       "lng": -86.48,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:09.965Z"
+      "verifiedAt": "2026-10-09T22:26:26.559Z"
     },
     {
       "id": "p8",
@@ -337,7 +337,7 @@
       "lat": 30.41,
       "lng": -87.21,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:10.145Z"
+      "verifiedAt": "2026-10-09T22:26:26.789Z"
     },
     {
       "id": "p9",
@@ -359,7 +359,7 @@
       "lat": 30.24,
       "lng": -85.65,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:11.113Z"
+      "verifiedAt": "2026-10-09T22:26:27.904Z"
     },
     {
       "id": "p10",
@@ -381,7 +381,7 @@
       "lat": 30.87,
       "lng": -85.23,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:11.392Z"
+      "verifiedAt": "2026-10-09T22:26:28.150Z"
     },
     {
       "id": "p11",
@@ -403,7 +403,7 @@
       "lat": 30.44,
       "lng": -85.05,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:11.873Z"
+      "verifiedAt": "2026-10-09T22:26:28.452Z"
     },
     {
       "id": "p12",
@@ -425,7 +425,7 @@
       "lat": 30.16,
       "lng": -85.72,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:12.116Z"
+      "verifiedAt": "2026-10-09T22:26:28.872Z"
     },
     {
       "id": "p13",
@@ -447,7 +447,7 @@
       "lat": 30.16,
       "lng": -85.66,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:12.217Z"
+      "verifiedAt": "2026-10-09T22:26:28.963Z"
     },
     {
       "id": "p14",
@@ -469,7 +469,7 @@
       "lat": 29.79,
       "lng": -85.3,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:12.309Z"
+      "verifiedAt": "2026-10-09T22:26:29.064Z"
     },
     {
       "id": "p15",
@@ -491,7 +491,7 @@
       "lat": 30.17,
       "lng": -85.67,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:12.398Z"
+      "verifiedAt": "2026-10-09T22:26:29.167Z"
     },
     {
       "id": "p16",
@@ -513,7 +513,7 @@
       "lat": 30.21,
       "lng": -85.85,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:12.896Z"
+      "verifiedAt": "2026-10-09T22:26:29.278Z"
     },
     {
       "id": "p17",
@@ -535,7 +535,7 @@
       "lat": 30.19,
       "lng": -85.83,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:13.001Z"
+      "verifiedAt": "2026-10-09T22:26:29.371Z"
     },
     {
       "id": "p18",
@@ -557,7 +557,7 @@
       "lat": 30.45,
       "lng": -85.6,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:13.254Z"
+      "verifiedAt": "2026-10-09T22:26:29.609Z"
     },
     {
       "id": "p19",
@@ -579,7 +579,7 @@
       "lat": 30.88,
       "lng": -85.42,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:13.508Z"
+      "verifiedAt": "2026-10-09T22:26:29.782Z"
     },
     {
       "id": "p20",
@@ -601,7 +601,7 @@
       "lat": 30.63,
       "lng": -87.04,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:13.893Z"
+      "verifiedAt": "2026-10-09T22:26:29.885Z"
     },
     {
       "id": "p21",
@@ -623,7 +623,7 @@
       "lat": 30.17,
       "lng": -85.68,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:14.151Z"
+      "verifiedAt": "2026-10-09T22:26:30.280Z"
     },
     {
       "id": "p22",
@@ -645,7 +645,7 @@
       "lat": 30.17,
       "lng": -85.67,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:14.244Z"
+      "verifiedAt": "2026-10-09T22:26:30.384Z"
     },
     {
       "id": "p23",
@@ -667,7 +667,7 @@
       "lat": 30.24,
       "lng": -85.65,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:14.349Z"
+      "verifiedAt": "2026-10-09T22:26:30.475Z"
     },
     {
       "id": "p24",
@@ -689,7 +689,7 @@
       "lat": 30.42,
       "lng": -86.62,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:14.663Z"
+      "verifiedAt": "2026-10-09T22:26:30.749Z"
     },
     {
       "id": "p25",
@@ -711,7 +711,7 @@
       "lat": 30.33,
       "lng": -86.13,
       "verified": "verified",
-      "verifiedAt": "2026-10-09T17:53:14.767Z"
+      "verifiedAt": "2026-10-09T22:26:30.857Z"
     },
     {
       "id": "p-land-1",
@@ -733,7 +733,7 @@
       "lat": 30.21,
       "lng": -85.52,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-2",
@@ -755,7 +755,7 @@
       "lat": 30.43,
       "lng": -86.17,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-3",
@@ -777,7 +777,7 @@
       "lat": 29.82,
       "lng": -85.21,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-4",
@@ -799,7 +799,7 @@
       "lat": 30.72,
       "lng": -86.11,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-5",
@@ -821,7 +821,7 @@
       "lat": 29.81,
       "lng": -85.3,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-6",
@@ -843,7 +843,7 @@
       "lat": 30.48,
       "lng": -86.49,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-7",
@@ -865,7 +865,7 @@
       "lat": 30.22,
       "lng": -85.58,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-8",
@@ -887,7 +887,7 @@
       "lat": 30.34,
       "lng": -85.64,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-9",
@@ -909,7 +909,7 @@
       "lat": 30.46,
       "lng": -87.23,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-10",
@@ -931,7 +931,7 @@
       "lat": 30.61,
       "lng": -87.33,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-11",
@@ -953,7 +953,7 @@
       "lat": 30.6,
       "lng": -87.16,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-12",
@@ -975,7 +975,7 @@
       "lat": 30.95,
       "lng": -87.15,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-13",
@@ -997,7 +997,7 @@
       "lat": 30.75,
       "lng": -86.58,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-14",
@@ -1019,7 +1019,7 @@
       "lat": 30.72,
       "lng": -86.11,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-15",
@@ -1041,7 +1041,7 @@
       "lat": 30.63,
       "lng": -85.83,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-16",
@@ -1063,7 +1063,7 @@
       "lat": 30.82,
       "lng": -85.89,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-17",
@@ -1085,7 +1085,7 @@
       "lat": 30.77,
       "lng": -85.23,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-18",
@@ -1107,7 +1107,7 @@
       "lat": 30.57,
       "lng": -85.12,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-open-1",
@@ -1129,7 +1129,7 @@
       "lat": 30.21,
       "lng": -85.74,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-open-2",
@@ -1151,7 +1151,7 @@
       "lat": 30.17,
       "lng": -85.67,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-open-3",
@@ -1173,7 +1173,7 @@
       "lat": 30.39,
       "lng": -86.42,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-open-4",
@@ -1195,7 +1195,7 @@
       "lat": 30.42,
       "lng": -87.22,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-open-5",
@@ -1217,7 +1217,7 @@
       "lat": 30.45,
       "lng": -86.58,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-open-6",
@@ -1239,7 +1239,7 @@
       "lat": 30.42,
       "lng": -87.21,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-19",
@@ -1261,7 +1261,7 @@
       "lat": 30.16,
       "lng": -85.64,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-20",
@@ -1283,7 +1283,7 @@
       "lat": 30.29,
       "lng": -85.62,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-21",
@@ -1305,7 +1305,7 @@
       "lat": 29.81,
       "lng": -85.3,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-22",
@@ -1327,7 +1327,7 @@
       "lat": 29.83,
       "lng": -85.2,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-23",
@@ -1349,7 +1349,7 @@
       "lat": 30.39,
       "lng": -86.23,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-24",
@@ -1371,7 +1371,7 @@
       "lat": 30.72,
       "lng": -86.12,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-25",
@@ -1393,7 +1393,7 @@
       "lat": 30.48,
       "lng": -86.43,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-26",
@@ -1415,7 +1415,7 @@
       "lat": 30.76,
       "lng": -86.57,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-27",
@@ -1437,7 +1437,7 @@
       "lat": 30.52,
       "lng": -85.54,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-28",
@@ -1459,7 +1459,7 @@
       "lat": 30.79,
       "lng": -85.68,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-29",
@@ -1481,7 +1481,7 @@
       "lat": 30.63,
       "lng": -85.23,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-30",
@@ -1503,7 +1503,7 @@
       "lat": 30.45,
       "lng": -85.04,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-31",
@@ -1525,7 +1525,7 @@
       "lat": 30.51,
       "lng": -87.21,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-land-32",
@@ -1547,7 +1547,7 @@
       "lat": 30.35,
       "lng": -87.4,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-open-7",
@@ -1569,7 +1569,7 @@
       "lat": 30.16,
       "lng": -85.66,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-open-8",
@@ -1591,7 +1591,7 @@
       "lat": 30.39,
       "lng": -86.23,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-open-9",
@@ -1613,7 +1613,7 @@
       "lat": 30.45,
       "lng": -86.49,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-open-10",
@@ -1635,7 +1635,7 @@
       "lat": 30.42,
       "lng": -87.21,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-open-11",
@@ -1657,7 +1657,7 @@
       "lat": 30.18,
       "lng": -85.8,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     },
     {
       "id": "p-open-12",
@@ -1679,7 +1679,7 @@
       "lat": 30.76,
       "lng": -86.57,
       "verified": "unverified",
-      "verifiedAt": "2026-10-09T17:53:14.869Z"
+      "verifiedAt": "2026-10-09T22:26:30.952Z"
     }
   ]
 }
