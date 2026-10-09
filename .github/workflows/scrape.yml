@@ -1,0 +1,168 @@
+# PPI Property Watch — Live Scraper & Feed
+# ---------------------------------------------------------------------------
+# Drop this file into your GitHub Pages repo (aceirt/ppiwatch) at:
+#   .github/workflows/scrape.yml
+# alongside scrape-live.ts, curated.json, and feed.json (all at the repo root).
+#
+# It runs the live scraper on a schedule and auto-commits the refreshed
+# feed.json, so https://aceirt.github.io/ppiwatch/feed.json stays live with
+# zero upkeep. The scraper pulls the REAL public auction calendar from each
+# realforeclose.com county portal and merges it with the curated inventory.
+#
+# All actions pinned to versions that natively run on Node 24 (Node 20 was
+# deprecated on GitHub Actions runners as of 2025-09-19). No Python step —
+# the scraper is pure TypeScript (Bun), so setup-python is not needed.
+#
+# Single-job design: scrape + commit + stage + deploy all run in ONE job so
+# there is no cross-job artifact transfer (which caused the "exit code 2"
+# deploy failures when download-artifact restored to a subdirectory).
+#
+# On failure: fires a webhook (CRM tracking event) to alert admin accounts
+# (hello@aceirt.com / drtracie@aceirt.com) instantly. Also writes
+# scraper-status.json so the app's admin settings panel shows the last exit
+# code.
+# ---------------------------------------------------------------------------
+name: Scrape & publish feed
+
+on:
+  schedule:
+    # Every 2 hours — new auction dates appear in the app within ~60s of each run.
+    - cron: "0 */2 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install scraper dependencies
+        run: bun add pdf-parse
+
+      - name: Scrape live sources
+        id: scrape
+        env:
+          REALFORECLOSE_USER: ${{ secrets.REALFORECLOSE_USER }}
+          REALFORECLOSE_PASS: ${{ secrets.REALFORECLOSE_PASS }}
+          ZENROWS_API_KEY: ${{ secrets.ZENROWS_API_KEY }}
+        run: bun scrape-live.ts
+
+      - name: Write scraper status (success)
+        if: success()
+        run: |
+          cat > scraper-status.json <<EOF
+          {
+            "lastRunAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "exitCode": 0,
+            "status": "success",
+            "listingCount": $(jq '.properties | length' feed.json),
+            "source": "ppi-scraper-live-v1",
+            "message": "Scraped $(jq '.properties | length' feed.json) listings — success"
+          }
+          EOF
+
+      - name: Write scraper status (failure)
+        if: failure()
+        run: |
+          cat > scraper-status.json <<EOF
+          {
+            "lastRunAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "exitCode": 1,
+            "status": "failure",
+            "listingCount": 0,
+            "source": "ppi-scraper-live-v1",
+            "message": "Scraper run failed — no new listings published. Check Actions logs."
+          }
+          EOF
+
+      - name: Notify admins on failure
+        if: failure()
+        env:
+          PPI_TRACKING_ID: tk_877558507c6b46a287b4b9b3113bcc4e
+          PPI_LOCATION_ID: SqO7aeEhM6QOT3YoHQNI
+          PPI_PROJECT_ID: "1789602484544434465"
+          PPI_FORM_ID: nc5sOkb7vwSipNRGBJEZ
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          set -e
+          EVENT=$(jq -n \
+            --arg ts "$(date +%s%3N)" \
+            --arg run "$GITHUB_RUN_ID" \
+            --arg stamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+              type: "external_form_submission",
+              timestamp: ($ts | tonumber),
+              formId: $env.PPI_FORM_ID,
+              formData: { first_name: "PPI", last_name: "Scraper", email: "scraper@ppinvestments.net", phone: "" },
+              formLabels: { first_name: "First Name", last_name: "Last Name", email: "Email Address", phone: "Phone Number" },
+              url: "https://github.com/aceirt/ppiwatch/actions/runs/\($run)",
+              title: "PPI Scraper Failure Alert",
+              path: "/scraper-failure",
+              trackingId: $env.PPI_TRACKING_ID,
+              locationId: $env.PPI_LOCATION_ID,
+              projectId: ($env.PPI_PROJECT_ID | tonumber),
+              sessionId: "scraper-failure-\($run)",
+              properties: {
+                deviceType: "server",
+                source: "ai_studio",
+                projectId: ($env.PPI_PROJECT_ID | tonumber),
+                formName: "Scraper Failure Alert",
+                tags: ["PPI", "PPI Investment Watch", "PPI Scraper", "PPI Scraper Failure", "PPI Exit Code: 1"]
+              },
+              customData: { exitCode: 1, runId: $run, repo: "aceirt/ppiwatch", message: "Scraper run failed — no new listings published.", alertedAt: $stamp }
+            }')
+          FORM=$(mktemp)
+          jq -n --arg event "$EVENT" '{event: $event}' > "$FORM"
+          curl -sS -X POST \
+            "https://backend.leadconnectorhq.com/external-tracking/events" \
+            -H "version: 2021-07-28" \
+            -F "event=$EVENT" \
+            || echo "[scraper-failure] webhook dispatch failed (non-blocking)"
+
+      - name: Commit refreshed feed.json + status
+        run: |
+          git config user.name "ppi-scraper"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add feed.json scraper-status.json
+          if git diff --staged --quiet; then
+            echo "No changes — feed.json already current."
+          else
+            git commit -m "chore: refresh feed.json + scraper status [skip ci]"
+            git push
+          fi
+
+      - name: Stage for GitHub Pages
+        run: |
+          mkdir -p _site
+          cp feed.json _site/feed.json
+          cp scraper-status.json _site/scraper-status.json
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
