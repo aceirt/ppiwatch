@@ -1,8 +1,8 @@
 {
-  "lastRunAt": "2026-10-23T21:10:53Z",
+  "lastRunAt": "2026-10-24T00:23:36Z",
   "exitCode": 0,
   "status": "success",
-  "listingCount": 76,
+  "listingCount": 75,
   "source": "ppi-scraper-live-v1",
-  "message": "Scraped 76 listings — success"
+  "message": "Scraped 75 listings — success"
 }
